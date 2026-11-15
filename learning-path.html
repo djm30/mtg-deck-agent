@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commander Deck Agent: A Learning Path</title>
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --ink:#e6e6e6; --muted:#9aa3b2; --acc:#7cc4ff; --ok:#6fdc8c; --warn:#ffcc66; --line:#2a2f3a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.55 system-ui, -apple-system, Segoe UI, sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width:900px; margin:0 auto; padding:32px 20px 80px; }
+  h1 { margin:0 0 4px; font-size:28px; }
+  h2 { margin:40px 0 10px; font-size:20px; color:var(--acc); }
+  h3 { margin:0; font-size:18px; }
+  a { color:var(--acc); }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  .bar { position:sticky; top:0; background:var(--bg); padding:10px 0; border-bottom:1px solid var(--line); z-index:5; }
+  .track { height:8px; background:var(--line); border-radius:4px; overflow:hidden; }
+  .fill { height:100%; width:0; background:var(--ok); transition:width .3s; }
+  .stage { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin:14px 0; }
+  .stage.done { border-color:var(--ok); opacity:.75; }
+  .head { display:flex; align-items:center; gap:12px; }
+  .head input { width:20px; height:20px; accent-color:var(--ok); }
+  .tag { font-size:12px; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:1px 8px; margin-left:auto; white-space:nowrap; }
+  .label { font-weight:600; color:var(--warn); font-size:13px; text-transform:uppercase; letter-spacing:.04em; margin-top:12px; }
+  ul { margin:6px 0; padding-left:22px; }
+  .stop { text-align:center; color:var(--warn); border-top:2px dashed var(--warn); margin:28px 0 8px; padding-top:8px; font-weight:600; }
+  .box { background:#12151b; border-left:3px solid var(--acc); padding:10px 14px; border-radius:4px; margin:10px 0; }
+  details summary { cursor:pointer; color:var(--muted); margin-top:10px; }
+  code { background:#232834; padding:1px 5px; border-radius:4px; font-size:14px; }
+  .arch { font-family:ui-monospace, Menlo, monospace; font-size:13px; white-space:pre; background:#12151b; padding:14px; border-radius:8px; overflow-x:auto; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<h1>Commander Deck Agent: A Learning Path</h1>
+<p class="sub">Learn agent building by making something you care about. Each stage teaches one concept and ends with something you can demo. You write all the code; the docs and your AI tutor (see <code>AGENTS.md</code>) explain ideas and nudge you along.</p>
+
+<div class="bar">
+  <div class="track"><div class="fill" id="fill"></div></div>
+  <small id="count" style="color:var(--muted)"></small>
+</div>
+
+<h2>Before you start: the one design rule</h2>
+<div class="box">
+  <b>LLMs propose, code verifies.</b> Commander has hard rules: exactly 100 cards, singleton, color identity, legality. Don't let a model "check" those, because it will get them wrong sometimes. Write plain functions for anything with a correct answer. Use the LLM for judgment calls: synergy, power level, what to cut. Most of what makes an agent reliable comes from this split.
+</div>
+
+<div class="arch">Target shape (you'll grow into this, not build it all at once):
+
+  user: "Build me a Meren of Clan Nel Toth deck, mid power"
+        │
+        ▼
+  [pick/confirm commander] ──(human approves)──▶ [plan: slot budget per role]
+                                                        │
+                    ┌───────────────────────────────────┼─────────────────────┐
+                    ▼                                   ▼                     ▼
+             Ramp advocate                     Interaction advocate     Synergy advocate
+                    └──────────────── proposals + arguments ──────────────────┘
+                                                        ▼
+                                                 Judge / curator
+                                                        ▼
+                                          validate() in plain code ──fail──┐
+                                                        │ pass            │
+                                                        ▼                 └──▶ back to debate
+                                                   decklist.txt
+  All of it traced in LangSmith (or Langfuse).</div>
+
+<h2>Budget</h2>
+<ul>
+  <li><b>2 hours</b>: Stages 0–3. A working, validated deck builder. This is the core.</li>
+  <li><b>4 hours</b>: + Stages 4–5. Agents that debate, and a human who signs off.</li>
+  <li><b>6 hours</b>: + Stages 6–8. Deep Agents, evals, and a runnable server.</li>
+</ul>
+<p>Each stage has a time box. If you go over it by 50%, take the smallest version that works and move on.</p>
+
+<!-- STAGE 0 -->
+<div class="stage" data-id="s0">
+  <div class="head"><input type="checkbox"><h3>0 · Setup and your first trace</h3><span class="tag">~20 min</span></div>
+  <div class="label">Concept</div>
+  <p>An LLM call is a function: messages go in, a message comes out. <b>Tracing</b> records every call (inputs, outputs, tokens, latency) so you can see what your agent actually did, not what you assume it did. Turn it on now. You'll use it at every stage after this.</p>
+  <div class="label">Do</div>
+  <ul>
+    <li>Python project (uv or venv), a model API key, and a free LangSmith account (Developer plan: 1 seat, 5k traces/month).</li>
+    <li>Set the LangSmith env vars from the quickstart. Make one chat-model call.</li>
+  </ul>
+  <div class="label">Done when</div>
+  <p>You can open LangSmith and see your call, including the exact prompt and the token count.</p>
+  <div class="label">Read</div>
+  <ul>
+    <li><a href="https://docs.langchain.com/oss/python/langchain/overview">LangChain overview</a></li>
+    <li><a href="https://docs.langchain.com/langsmith/observability-quickstart">LangSmith tracing quickstart</a></li>
+    <li>Free alternative: <a href="https://langfuse.com/docs">Langfuse</a> (open source, can self-host).</li>
+  </ul>
+  <details><summary>Reflect</summary><ul><li>What's the difference between a <i>run</i> and a <i>trace</i> in the UI?</li><li>Where would you look first if a response were slow?</li></ul></details>
+</div>
+
+<!-- STAGE 1 -->
+<div class="stage" data-id="s1">
+  <div class="head"><input type="checkbox"><h3>1 · Tools: give the model real card data</h3><span class="tag">~40 min</span></div>
+  <div class="label">Concept</div>
+  <p>A model's knowledge of cards is stale and sometimes made up. A <b>tool</b> is a function plus a description the model reads to decide when and how to call it. An <b>agent</b> is a loop: the model picks a tool, your code runs it, the result goes back to the model, and this repeats until the model answers. This is the ReAct pattern. The tool's name, docstring, and argument types work as a prompt, so write them for the model to read.</p>
+  <div class="label">Do</div>
+  <ul>
+    <li>Write a <code>search_cards</code> tool on top of the Scryfall API. Its query syntax already supports color identity, type, and mana value.</li>
+    <li>Wrap it in an agent using <code>create_agent</code>.</li>
+    <li>Read Scryfall's rules: send a User-Agent header, stay under the rate limit, and return only the fields the model needs.</li>
+  </ul>
+  <div class="label">Done when</div>
+  <p>"Find 5 green ramp creatures with mana value 3 or less" returns real cards, and the trace shows the tool call(s).</p>
+  <div class="label">Read</div>
+  <ul>
+    <li><a href="https://docs.langchain.com/oss/python/langchain/agents">Agents</a> · <a href="https://docs.langchain.com/oss/python/langchain/tools">Tools</a></li>
+    <li><a href="https://scryfall.com/docs/api">Scryfall API</a> (see "search" and the query syntax page)</li>
+  </ul>
+  <details><summary>Reflect</summary><ul><li>What happens to cost and context when your tool returns the full Scryfall JSON?</li><li>Change the tool docstring to something vague. How does the agent's behavior change in the trace?</li></ul></details>
+</div>
+
+<!-- STAGE 2 -->
+<div class="stage" data-id="s2">
+  <div class="head"><input type="checkbox"><h3>2 · Structured output and a validator</h3><span class="tag">~30 min</span></div>
+  <div class="label">Concept</div>
+  <p><b>Structured output</b> makes the model return data that matches a schema (for example Pydantic), not free text, so code can use the result. Pair it with a <b>deterministic validator</b>: a plain function that checks the hard rules. The validator's error messages also become feedback for the model in Stage 3.</p>
+  <div class="label">Do</div>
+  <ul>
+    <li>Design a deck schema: commander, and cards each tagged with a role (land, ramp, draw, removal, wipe, synergy, win-con).</li>
+    <li>Write <code>validate(deck)</code> with no LLM in it. It should check 100 cards, singleton (basic lands excepted), color identity, and Commander legality. Return specific, actionable errors.</li>
+  </ul>
+  <div class="label">Done when</div>
+  <p>You can hand-feed it a broken deck and get back a precise list of what's wrong.</p>
+  <div class="label">Read</div>
+  <ul><li><a href="https://docs.langchain.com/oss/python/langchain/structured-output">Structured output</a></li></ul>
+  <details><summary>Reflect</summary><ul><li>Which error message would help a model fix the deck: "invalid deck" or "Sol Ring appears twice; 101 cards, remove 1"? Why?</li></ul></details>
+</div>
+
+<!-- STAGE 3 -->
+<div class="stage" data-id="s3">
+  <div class="head"><input type="checkbox"><h3>3 · LangGraph: an explicit workflow with a fix-it loop</h3><span class="tag">~45 min</span></div>
+  <div class="label">Concept</div>
+  <p>The <code>create_agent</code> loop leaves the plan up to the model. <b>LangGraph</b> lets you write the control flow yourself. <b>State</b> is a typed object that every step reads and updates. <b>Nodes</b> are functions. <b>Edges</b> connect them, and <b>conditional edges</b> branch, which is how you get loops. Use a graph when you know the steps. Use an open agent loop when you don't.</p>
+  <div class="label">Do</div>
+  <ul>
+    <li>Build: <i>choose commander → plan slot budget (e.g. ~37 lands, ~10 ramp, ~10 draw, ~10 removal) → fill slots → validate</i>.</li>
+    <li>If validation fails, route back to a "repair" node that receives the errors. Cap the number of retries.</li>
+  </ul>
+  <div class="label">Done when</div>
+  <p>One command produces a valid 100-card deck, and you can point to at least one repair loop in a trace.</p>
+  <div class="label">Read</div>
+  <ul><li><a href="https://docs.langchain.com/oss/python/langgraph/overview">LangGraph overview</a> · <a href="https://docs.langchain.com/oss/python/langgraph/graph-api">Graph API</a> (state, reducers, conditional edges)</li></ul>
+  <details><summary>Reflect</summary><ul><li>What is a reducer, and why does a list of cards in state need one?</li><li>What stops your graph from looping forever?</li></ul></details>
+</div>
+
+<div class="stop">2-hour stop. You have a real agent. Stopping here is fine.</div>
+
+<!-- STAGE 4 -->
+<div class="stage" data-id="s4">
+  <div class="head"><input type="checkbox"><h3>4 · Multi-agent debate</h3><span class="tag">~60 min</span></div>
+  <div class="label">Concept</div>
+  <p><b>Multi-agent</b> means several model "roles", each with its own prompt, tools, and context, coordinated by a pattern: <i>supervisor</i> (one agent delegates), <i>handoffs</i> (agents pass control), or <i>debate</i> (advocates argue and a judge decides). It costs more and is harder to debug. It pays off when the roles really do have conflicting priorities, and deck building has them: ramp vs. interaction vs. synergy, all competing for limited slots.</p>
+  <div class="label">Do</div>
+  <ul>
+    <li>2–3 advocates, each arguing for its category, plus a judge that resolves the contested slots.</li>
+    <li>Bound it: a fixed number of rounds, and short structured arguments (card, slot, reason, what to cut).</li>
+    <li>Debate only the contested slots, roughly the last 10–15 cards, not all 100.</li>
+  </ul>
+  <div class="label">Done when</div>
+  <p>You can read a debate transcript in the trace and explain why the judge picked what it picked.</p>
+  <div class="label">Read</div>
+  <ul><li><a href="https://docs.langchain.com/oss/python/langchain/multi-agent">Multi-agent patterns</a></li></ul>
+  <details><summary>Reflect</summary><ul><li>Did the debate produce a better deck than Stage 3, or just a longer trace? How would you tell?</li><li>What does each advocate actually need in its context, and what should it not see?</li></ul></details>
+</div>
+
+<!-- STAGE 5 -->
+<div class="stage" data-id="s5">
+  <div class="head"><input type="checkbox"><h3>5 · Memory and human-in-the-loop</h3><span class="tag">~30 min</span></div>
+  <div class="label">Concept</div>
+  <p>A <b>checkpointer</b> saves graph state after each step, keyed by a <b>thread</b>. That gives you memory, resumability, and "time travel". An <b>interrupt</b> pauses the graph to wait for a human, and you resume it later with their answer. The human-approval step is what makes an agent safe to use for real decisions.</p>
+  <div class="label">Do</div>
+  <ul>
+    <li>Add a checkpointer. Interrupt after commander selection and again before the final list, so you can approve, swap, or veto cards.</li>
+  </ul>
+  <div class="label">Done when</div>
+  <p>You can stop the run, come back, say "cut Cyclonic Rift, I hate it," and get a valid deck that respects that.</p>
+  <div class="label">Read</div>
+  <ul><li><a href="https://docs.langchain.com/oss/python/langgraph/persistence">Persistence</a> · <a href="https://docs.langchain.com/oss/python/langgraph/interrupts">Interrupts</a></li></ul>
+</div>
+
+<div class="stop">4-hour stop. Debate plus human control is the project you set out to build.</div>
+
+<!-- STAGE 6 -->
+<div class="stage" data-id="s6">
+  <div class="head"><input type="checkbox"><h3>6 · Deep Agents: the harness approach</h3><span class="tag">~45 min</span></div>
+  <div class="label">Concept</div>
+  <p>A <b>framework</b> (LangGraph) gives you parts to assemble. A <b>harness</b> (Deep Agents) gives you a ready-made agent with planning (a todo list), a virtual filesystem for scratch notes, and <b>subagents</b> that run in isolated context. Isolated context is the main idea: a subagent can read 200 card results and send back only a summary, so the main agent's context stays small.</p>
+  <div class="label">Do</div>
+  <ul>
+    <li>Rebuild the orchestration with <code>create_deep_agent</code>. Make your advocates subagents and reuse your Stage 1 tool and Stage 2 validator.</li>
+    <li>Have it write the decklist and its reasoning to files.</li>
+  </ul>
+  <div class="label">Done when</div>
+  <p>You can write a short comparison: what got easier, what you lost control of, and which approach you'd ship.</p>
+  <div class="label">Read</div>
+  <ul><li><a href="https://docs.langchain.com/oss/python/deepagents/overview">Deep Agents overview</a> · <a href="https://docs.langchain.com/oss/python/deepagents/subagents">Subagents</a></li></ul>
+</div>
+
+<!-- STAGE 7 -->
+<div class="stage" data-id="s7">
+  <div class="head"><input type="checkbox"><h3>7 · Evals: is it actually good?</h3><span class="tag">~30 min</span></div>
+  <div class="label">Concept</div>
+  <p>An <b>eval</b> is a test for non-deterministic output: a dataset of inputs plus <b>evaluators</b> that score each output. Use code evaluators for objective checks (is it valid? does it have at least 10 ramp?). Use <b>LLM-as-judge</b> for subjective ones (does it fit the commander's plan?). Without evals, every prompt change is a guess.</p>
+  <div class="label">Do</div>
+  <ul>
+    <li>A dataset of 5–10 commanders across colors and archetypes.</li>
+    <li>At least one code evaluator and one LLM-judge evaluator. Run it, change a prompt, run it again, and compare.</li>
+  </ul>
+  <div class="label">Done when</div>
+  <p>You have two experiment runs side by side in LangSmith and can say which version is better.</p>
+  <div class="label">Read</div>
+  <ul><li><a href="https://docs.langchain.com/langsmith/evaluation-quickstart">Evaluation quickstart</a></li></ul>
+</div>
+
+<!-- STAGE 8 -->
+<div class="stage" data-id="s8">
+  <div class="head"><input type="checkbox"><h3>8 · Make it deployable</h3><span class="tag">~30–45 min</span></div>
+  <div class="label">Concept</div>
+  <p>To deploy an agent you have to serve a <i>stateful, long-running, streaming</i> process, not just put a function behind an endpoint. The LangGraph server handles threads, streaming, interrupts, and background runs. LangGraph Studio is a visual debugger that runs on top of it.</p>
+  <div class="label">Do</div>
+  <ul>
+    <li>Add a <code>langgraph.json</code> and run the local dev server. Drive a run from Studio, including an interrupt.</li>
+    <li>Optional: build a Docker image. Managed hosting on LangSmith needs the paid Plus plan. Self-hosting the container is the free route.</li>
+  </ul>
+  <div class="label">Done when</div>
+  <p>Someone else could start your agent with one command and talk to it over HTTP.</p>
+  <div class="label">Read</div>
+  <ul><li><a href="https://docs.langchain.com/oss/python/langgraph/local-server">Run a local server</a></li></ul>
+</div>
+
+<div class="stop">6-hour finish. You've covered the core concepts used in production agents.</div>
+
+<h2>Concept glossary</h2>
+<ul>
+  <li><b>Tool</b>: a function plus a schema the model can choose to call.</li>
+  <li><b>Agent loop / ReAct</b>: the model reasons, calls a tool, sees the result, and repeats until done.</li>
+  <li><b>Context engineering</b>: choosing what goes into each model call. Most agent quality comes from this.</li>
+  <li><b>State / node / edge</b>: LangGraph's building blocks: shared data, steps, and routing.</li>
+  <li><b>Checkpointer / thread</b>: saved state per conversation. Makes memory and resuming possible.</li>
+  <li><b>Interrupt</b>: pause for human input, then resume.</li>
+  <li><b>Subagent</b>: a delegated agent with its own isolated context.</li>
+  <li><b>Harness vs framework</b>: an opinionated, ready-to-run agent vs. building blocks you assemble.</li>
+  <li><b>Trace / eval</b>: what happened, and whether it was good.</li>
+</ul>
+</main>
+<script>
+  const KEY = "mtg-agent-path";
+  const saved = JSON.parse(localStorage.getItem(KEY) || "{}");
+  const stages = [...document.querySelectorAll(".stage")];
+  function render() {
+    const done = stages.filter(s => s.querySelector("input").checked).length;
+    document.getElementById("fill").style.width = (done / stages.length * 100) + "%";
+    document.getElementById("count").textContent = `${done} / ${stages.length} stages done`;
+  }
+  stages.forEach(s => {
+    const cb = s.querySelector("input");
+    cb.checked = !!saved[s.dataset.id];
+    s.classList.toggle("done", cb.checked);
+    cb.addEventListener("change", () => {
+      saved[s.dataset.id] = cb.checked;
+      localStorage.setItem(KEY, JSON.stringify(saved));
+      s.classList.toggle("done", cb.checked);
+      render();
+    });
+  });
+  render();
+</script>
+</body>
+</html>

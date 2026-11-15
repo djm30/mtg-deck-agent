@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "skills": {
+    "langsmith-custom-apps": {
+      "source": "langchain-ai/langsmith-skills",
+      "sourceType": "github",
+      "skillPath": "config/skills/langsmith-custom-apps/SKILL.md",
+      "computedHash": "ed89cd7d8178528bf0d9b20c2fcb341e60b7f831b35a25adc273984dd959caa9"
+    },
+    "langsmith-dataset": {
+      "source": "langchain-ai/langsmith-skills",
+      "sourceType": "github",
+      "skillPath": "config/skills/langsmith-dataset/SKILL.md",
+      "computedHash": "dc3508c4b3d0830621805171162f69ab3dd7b483f8c5b59b8879dd6b767c2245"
+    },
+    "langsmith-evaluator": {
+      "source": "langchain-ai/langsmith-skills",
+      "sourceType": "github",
+      "skillPath": "config/skills/langsmith-evaluator/SKILL.md",
+      "computedHash": "d7989e19e61441c36c1a182b9413531e0bb14c434578947e736c8856e2848e7b"
+    },
+    "langsmith-experiment-diagnosis": {
+      "source": "langchain-ai/langsmith-skills",
+      "sourceType": "github",
+      "skillPath": "config/skills/langsmith-experiment-diagnosis/SKILL.md",
+      "computedHash": "f8e58b4778e1e029fc75ca2484e04f95ad5e54ae6de72eff6e7898a97ad8593b"
+    },
+    "langsmith-graph-evaluator": {
+      "source": "langchain-ai/langsmith-skills",
+      "sourceType": "github",
+      "skillPath": "config/skills/langsmith-graph-evaluator/SKILL.md",
+      "computedHash": "bb538ae2eb7704d7d03c1ebce0b9dc5d9ada0dde749b2c0a6ef4f98771e7f9b8"
+    },
+    "langsmith-online-eval-engineering": {
+      "source": "langchain-ai/langsmith-skills",
+      "sourceType": "github",
+      "skillPath": "config/skills/langsmith-online-eval-engineering/SKILL.md",
+      "computedHash": "9dace78d5b4797dcb2f204bb06bbafd66909b73abdbe146539abf12e81120a0e"
+    },
+    "langsmith-trace": {
+      "source": "langchain-ai/langsmith-skills",
+      "sourceType": "github",
+      "skillPath": "config/skills/langsmith-trace/SKILL.md",
+      "computedHash": "c498c767291e0b3f203bbc060da35d5b4d0adcf6b7f673d1b35ca1e3c4c04e88"
+    }
+  }
+}
