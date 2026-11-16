@@ -1,9 +1,11 @@
 import asyncio
 from collections.abc import Callable
-from http.token_bucket import Sleep
-from http.utils import full_jitter_backoff, retry_after_seconds
+from typing import Optional
 
 import httpx
+
+from mtg_deck_agent.transport.token_bucket import Sleep
+from mtg_deck_agent.transport.utils import full_jitter_backoff, retry_after_seconds
 
 IDEMPOTENT_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "PUT", "DELETE"})
 RETRYABLE_SERVER_ERRORS = frozenset({502, 503, 504})
@@ -22,14 +24,17 @@ class RetryTransport(httpx.AsyncBaseTransport):
         *,
         max_retries: int = 3,
         max_wait_s: float = 10.0,
-        backoff: Callable[[float], float] = full_jitter_backoff,
+        backoff: Callable[
+            [int],
+            float,
+        ] = full_jitter_backoff,
         sleep: Sleep = asyncio.sleep,
     ):
         self._inner = inner
         self._max_retries = max_retries
         self._max_wait_s = max_wait_s
         self._backoff = backoff
-        self._sleep = sleep()
+        self._sleep = sleep
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         # Initial attempt not counted towards max retries

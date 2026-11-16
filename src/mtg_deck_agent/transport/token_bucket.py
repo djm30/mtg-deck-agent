@@ -1,10 +1,13 @@
 import asyncio
 import time
 from collections.abc import Awaitable, Callable
-from http.errors import RateLimitError
+
+from mtg_deck_agent.transport.errors import RateLimitError
 
 Clock = Callable[[], float]
 Sleep = Callable[[float], Awaitable[None]]
+
+TOKEN_TOLERANCE = 1e-9
 
 
 class TokenBucket:

@@ -55,3 +55,5 @@ known-first-party = ["mtg_deck_agent"]
 [tool.ruff.format]
 quote-style = "double"
 docstring-code-format = true
+
+[tool.ty]
